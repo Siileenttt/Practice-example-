@@ -1,0 +1,12 @@
+<#import module#>
+Import-Module VMware.PowerCLI
+
+$secpass = ConvertTo-SecureString 'Password' -AsPlainText -Force
+<#using password to get in the server#>
+$cred = New-Object System.Management.Automation.PSCredential('Username', $secpass)
+
+Write-Host "enter the server name:"
+$RemoteServerName=Read-Host
+
+<#connecth the reqired server#>
+$vm = Get-VM -Name $RemoteServerName
