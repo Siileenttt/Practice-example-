@@ -1,0 +1,60 @@
+#import the module
+Import-Module ".\MyModule.psm1"
+# Get the CD/DVD drive
+$cdDrive = Get-CDDrive -VM $vm
+
+# Upgrade VM compatibility to ESXi 7.0 (virtual hardware version 17)
+Set-VM -VM $vm -Version "vmx-17" -Confirm:$false
+
+Set-VM -VM $vm -GuestId windows2019_64Guest -Confirm:$false
+
+# Change Firmware to EFI
+Get-VM -VM $vm | Get-View | ForEach-Object {
+    $spec = New-Object VMware.Vim.VirtualMachineConfigSpec
+    $spec.Firmware = "efi"
+    $spec.BootOptions = New-Object VMware.Vim.VirtualMachineBootOptions
+    $spec.BootOptions.EfiSecureBootEnabled = $true
+    $_.ReconfigVM_Task($spec)
+}
+
+# Unmount the ISO and disconnect the drive
+Set-CDDrive -CD $cdDrive -NoMedia -Confirm:$false -Connected:$false
+
+Start-VM -VM $vm -Confirm:$false
+
+#
+#
+#
+<# firewall Ports#>
+
+# Path to your ports file
+$portsFile = ".\thirdPartyPorts.txt"
+
+# Read ports, handle both comma-separated or line-separated
+$portsContent = Get-Content $portsFile -Raw
+$portsList = $portsContent -split '[,`n\r]+' | Where-Object { $_ -match '^\d+$' }
+
+# Join ports into comma-separated string
+$ports = $portsList -join ','
+
+# Name of the firewall rule
+$ruleName = "BO ports open"
+
+# Check if rule already exists, remove if yes
+if (Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue) {
+    Remove-NetFirewallRule -DisplayName $ruleName
+}
+
+# Create new inbound firewall rule to open specified TCP ports
+New-NetFirewallRule -DisplayName $ruleName `
+    -Direction Inbound `
+    -Protocol TCP `
+    -LocalPort $ports `
+    -Action Allow `
+    -Profile Domain,Private,Public
+
+$List = Get-Content "c:\windows\system32\logfiles\Firewall\pfirewall.log"
+$List = $List -Split "`n" | Select-Object -Skip 5 | Where-Object { $_ -ne '' }
+$Headers =@('Date', 'Time', 'Action', 'Protocol', 'Src-IP', 'Dst-IP', 'Src-Port', 'Dst-Port', 'Size', 'TCP-Flags', 'TCP-SYN', 'TCP-ACK', 'TCP-Win', 'ICMP-Type', 'ICMP-Code', 'Info', 'Path')
+$Objects = $List | ConvertFrom-Csv -Delimiter ' ' -Header $Headers
+$Objects | Select-Object -Last 10 | Format-Table
