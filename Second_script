@@ -1,0 +1,61 @@
+#Import the Module
+Import-Module ".\MyModule.psm1"
+
+<#password as secure string
+$secpass = ConvertTo-SecureString 'Password' -AsPlainText -Force
+<#using password to get in the server
+$cred = New-Object System.Management.Automation.PSCredential('Username', $secpass)
+#>
+
+<#inside the server#>
+Invoke-Command -ComputerName $RemoteServerName -Credential $cred -ScriptBlock { 
+    
+PowerShell -ExecutionPolicy Bypass -command \\world.fluidtechnology.net\software\IT-Resources\Microsoft\In-Place_Upgrades\2019\Install\Scripts\Copy_and_run_scripts.ps1
+ }
+Start-Sleep -seconds 1200
+<#connect with vsphere#>
+Connect-VIServer -Server "seemm1vsphere001.world.fluidtechnology.net"
+<#connecth the reqired server
+$vm = Get-VM -Name "SEEMM1APP___"
+#>
+Restart-VMGuest -VM $vm
+Start-Sleep -seconds 300
+Invoke-Command -ComputerName $RemoteServerName -Credential $cred -ScriptBlock { 
+    
+    Start-Process cmd.exe -ArgumentList '/c shutdown /r /o' -Verb RunAs
+
+    <#for sending keys#>
+    Add-Type -AssemblyName System.Windows.Forms
+
+    Start-Sleep -Milliseconds 100
+    # Send the keystrokes
+    [System.Windows.Forms.SendKeys]::SendWait("{Enter}")
+    Start-Sleep -Milliseconds 200
+    [System.Windows.Forms.SendKeys]::SendWait("{TAB}")
+    Start-Sleep -Milliseconds 200
+    [System.Windows.Forms.SendKeys]::SendWait("{TAB}")
+    Start-Sleep -Milliseconds 200
+    [System.Windows.Forms.SendKeys]::SendWait("{TAB}")
+    Start-Sleep -Milliseconds 200
+    [System.Windows.Forms.SendKeys]::SendWait("{TAB}")
+    Start-Sleep -Milliseconds 200
+    [System.Windows.Forms.SendKeys]::SendWait("{Enter}")
+    Start-Sleep -Milliseconds 200
+    [System.Windows.Forms.SendKeys]::SendWait("{TAB}")
+    Start-Sleep -Milliseconds 200
+    [System.Windows.Forms.SendKeys]::SendWait("{Enter}")
+    Start-Sleep -Milliseconds 200
+    [System.Windows.Forms.SendKeys]::SendWait("{TAB}")
+    Start-Sleep -Milliseconds 200
+    [System.Windows.Forms.SendKeys]::SendWait("{Enter}")
+    Start-Sleep -Milliseconds 200
+
+}
+$browserPath = "https://seemm1vsphere001.world.fluidtechnology.net/"
+Start-Process "chrome.exe" $browserPath
+
+# Get VM web console URL
+$console = Get-VMWebConsole -VM $vm
+
+# Launch browser maximized
+Start-Process -FilePath $browserPath -ArgumentList "--start-maximized", $console.Url
