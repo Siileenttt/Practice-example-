@@ -1,0 +1,6 @@
+Install-Package InputSimulatorStandard
+In powershell:-
+    Install-Module -Name VMware.PowerCLI -Scope CurrentUser
+    Install-Module -Name PSRemoteRegistry -Scope CurrentUser
+    Install-WindowsFeature RSAT-AD-PowerShell
+    
