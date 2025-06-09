@@ -1,0 +1,264 @@
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Threading;
+using WindowsInput;
+using WindowsInput.Native;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        string path1 = @"D:\Install";
+        string path2 = @"E:\Install";
+        string finalPath;
+        string sourceFolder = @"\\world.fluidtechnology.net\software\IT-Resources\Microsoft\In-Place_Upgrades\2019\2019OS\"; // Change this to your actual source path
+        string destPath1 = @"D:\Install";
+        string destPath2 = @"E:\Install";
+        string targetPath;
+        string cmd = @"D:\Program Files\VMware\VMware Tools\Drivers\pvscsi\Win8\amd64\pvscsi.inf";
+
+        // File paths for scripts to run
+        string filePath1 = @".\First\File1.ps1"; 
+        string filePath2 = @".\second\File1.ps1";
+        string filePath3 = @".\third\File1.ps1";
+        string filePath4 = @".\forth\File1.ps1";
+        string Module =@".\MyModule.psm1";
+
+        Process process = new Process();
+            process.StartInfo.FileName = Module;
+            process.Start();
+            process.WaitForExit();
+
+        // Check first file existence
+        if (!File.Exists(filePath1))
+        {
+            Console.WriteLine($"Error: File not found! {filePath1}");
+            return;
+        }
+
+        // Wait 5 minutes before starting
+        DateTime newTime = DateTime.Now.AddMinutes(5);
+        TimeSpan waitTime = newTime - DateTime.Now;
+
+        if (waitTime > TimeSpan.Zero)
+        {
+            Console.WriteLine($"Waiting 5 minutes to launch {Path.GetFileName(filePath1)}...");
+            Thread.Sleep(waitTime);
+        }
+
+        Console.WriteLine($"Launching {Path.GetFileName(filePath1)}...");
+
+        try
+        {
+            process.StartInfo.FileName = filePath1;
+            process.Start();
+            process.WaitForExit(); // wait for completion
+
+            #region folder_create
+            // Determine final path based on drive availability
+            if (Directory.Exists(path1))
+            {
+                finalPath = path1;
+            }
+            else if (Directory.Exists(path2))
+            {
+                finalPath = path2;
+                Directory.CreateDirectory(finalPath);
+            }
+            else
+            {
+                Console.WriteLine("Neither D: nor E: drive is available.");
+                return;
+            }
+            #endregion
+
+            #region copy_folder_2019
+            // Create folder if it doesn't exist
+            if (!Directory.Exists(finalPath))
+            {
+                Directory.CreateDirectory(finalPath);
+                Console.WriteLine($"Created folder at: {finalPath}");
+            }
+            else
+            {
+                Console.WriteLine($"Folder already exists at: {finalPath}");
+            }
+
+            if (Directory.Exists(destPath1))
+            {
+                targetPath = destPath1;
+            }
+            else if (Directory.Exists(destPath2))
+            {
+                targetPath = destPath2;
+                if (!Directory.Exists(targetPath))
+                {
+                    Directory.CreateDirectory(targetPath);
+                }
+            }
+            else
+            {
+                Console.WriteLine("Neither D: nor E: drive is available.");
+                return;
+            }
+
+            try
+            {
+                CopyDirectory(sourceFolder, targetPath);
+                Console.WriteLine($"Successfully copied folder to: {targetPath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error copying folder: {ex.Message}");
+            }
+            #endregion
+
+            #region Start_setup
+            string setupExePath = Path.Combine(targetPath, "setup.exe");
+            if (File.Exists(setupExePath))
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = setupExePath,
+                        UseShellExecute = true,
+                        Verb = "runas"
+                    });
+                    Console.WriteLine("setup.exe launched.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Could not start setup.exe: {ex.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("setup.exe not found in the copied folder.");
+            }
+            #endregion
+
+            #region send_input
+            var sim = new InputSimulator();
+
+            Console.WriteLine("You have 5 seconds to focus the target window...");
+            Thread.Sleep(5000);
+
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            Thread.Sleep(100);
+            sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
+            Thread.Sleep(100);
+            sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
+            Thread.Sleep(100);
+            sim.Keyboard.TextEntry("N69G4-B89J2-4G8F4-WWYCC-J464C");
+            Thread.Sleep(100);
+            #endregion
+
+            // Wait 20 minutes (1200000 ms) for OS installation
+            Thread.Sleep(1200000);
+
+            #region launch_server_with_2019
+            if (!File.Exists(filePath2))
+            {
+                Console.WriteLine($"Error: File not found! {filePath2}");
+                return;
+            }
+
+            process.StartInfo.FileName = filePath2;
+            process.Start();
+            process.WaitForExit();
+
+            sim.Mouse.MoveMouseTo(65535 / 2, 65535 / 2);
+            sim.Mouse.LeftButtonClick();
+            Thread.Sleep(100);
+
+            sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
+            Thread.Sleep(100);
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            Thread.Sleep(100);
+            sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
+            Thread.Sleep(100);
+            sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
+            Thread.Sleep(100);
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            Thread.Sleep(100);
+
+            sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
+            Thread.Sleep(100);
+            sim.Keyboard.KeyPress(VirtualKeyCode.TAB);
+            Thread.Sleep(100);
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            Thread.Sleep(100);
+
+            if (!File.Exists(filePath3))
+            {
+                Console.WriteLine($"Error: File not found! {filePath3}");
+                return;
+            }
+
+            process.StartInfo.FileName = filePath3;
+            process.Start();
+            process.WaitForExit();
+
+            sim.Mouse.LeftButtonClick();
+            Thread.Sleep(100);
+            sim.Keyboard.TextEntry($"drvload {cmd}");
+            Thread.Sleep(2000);
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            Thread.Sleep(2000);
+            sim.Keyboard.TextEntry("mbr2gpt /validate");
+            Thread.Sleep(2000);
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            Thread.Sleep(2000);
+            sim.Keyboard.TextEntry("mbr2gpt /convert");
+            Thread.Sleep(2000);
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            Thread.Sleep(2000);
+
+            sim.Keyboard.TextEntry("shutdown /s /f /t 0");
+            Thread.Sleep(2000);
+            sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+            Thread.Sleep(2000);
+            #endregion
+
+            #region final_setting
+            if (!File.Exists(filePath4))
+            {
+                Console.WriteLine($"Error: File not found! {filePath4}");
+                return;
+            }
+
+            process.StartInfo.FileName = filePath4;
+            process.Start();
+            process.WaitForExit();
+            #endregion
+
+            Console.WriteLine("\nApplication has exited.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Failed to start process: " + ex.Message);
+        }
+    }
+
+    // CopyDirectory must be outside Main
+    static void CopyDirectory(string sourceDir, string destinationDir)
+    {
+        Directory.CreateDirectory(destinationDir);
+
+        foreach (string filePath in Directory.GetFiles(sourceDir))
+        {
+            string fileName = Path.GetFileName(filePath);
+            string destFile = Path.Combine(destinationDir, fileName);
+            File.Copy(filePath, destFile, true);
+        }
+
+        foreach (string subDir in Directory.GetDirectories(sourceDir))
+        {
+            string dirName = Path.GetFileName(subDir);
+            string destSubDir = Path.Combine(destinationDir, dirName);
+            CopyDirectory(subDir, destSubDir);
+        }
+    }
+}
