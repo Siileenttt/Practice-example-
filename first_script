@@ -1,0 +1,235 @@
+#Import the Module
+Import-Module ".\MyModule.psm1"
+<# password as secure string
+    $secpass = ConvertTo-SecureString 'Password' -AsPlainText -Force
+    <#using password to get in the server
+    $cred = New-Object System.Management.Automation.PSCredential('Username', $secpass)
+
+    Write-Host "enter the server name:"
+    $RemoteServerName=Read-Host
+#>
+<#inside the server#>
+Invoke-Command -ComputerName $RemoteServerName -Credential $cred -ScriptBlock { 
+    <#checking the free disk 40GB#>
+$freespace = (Get-WmiObject Win32_LogicalDisk -Filter "DeviceID='C:'").FreeSpace / 1GB
+<#wmi object beacuse of 5.1 version#>
+if ($freespace -ge 40) {
+    Write-Output "OK: $freespace GB free"
+} else {
+    Write-Output "LOW SPACE: Only $freespace GB free"
+ }
+}
+
+
+
+
+###### file2
+<#import module#>
+Import-Module VMware.PowerCLI
+<#connect with vsphere#>
+Connect-VIServer -Server "seemm1vsphere001.world.fluidtechnology.net"
+<#connecth the reqired server
+$vm = Get-VM -Name "SEEMM1APP___"
+#>
+<#locate the hard disk#>
+$disk = Get-HardDisk -VM $vm | Where-Object { $_.Name -eq "Hard disk 1" }
+<#raise the required hard disk ammount#>
+Write-Host "give amount to increse the disk:"
+$reqireddiskincrease=Read-host
+Set-HardDisk -HardDisk $disk -CapacityGB $reqireddiskincrease -Confirm:$true
+
+
+
+
+############## file3
+<#resize the disk in server#>
+Invoke-Command -ComputerName $RemoteServerName -ArgumentList $reqireddiskincrease -Credential $cred -ScriptBlock { 
+    Resize-Partition -DriveLetter C -Size $reqireddiskincrease
+
+
+
+
+############### file4
+    $PSVersionTable
+    if ($PSVersionTable.PSVersion -ge [Version]"5.1") {
+        Write-Host "PowerShell version is 5.1 or higher"
+    } else {
+        Write-Host "PowerShell version is lower than 5.1"
+        <#here we can past the link to run the powershell file of 5.1 version#>
+    }
+
+
+
+    ######### file5
+    # Get members of the Administrators group
+$adminGroup = [ADSI]"WinNT://./Administrators,group"
+$members = @($adminGroup.Invoke("Members")) | ForEach-Object {
+    $_.GetType().InvokeMember("Name", 'GetProperty', $null, $_, $null)
+
+# Filter for accounts that contain 'WORLD'
+$worldAccounts = $members | Where-Object { $_ -like '*WORLD*' }
+
+# allowed WORLD account
+$allowedWorldAccount = "REQUIRED_WORLD_ACCOUNT"  
+
+# Check for unexpected WORLD accounts
+$unauthorizedWorldAccounts = $worldAccounts | Where-Object { $_ -ne $allowedWorldAccount }
+
+# check the email form Email_Account file.
+$emailMap = @{}
+Get-Content "C:\Practise\email_account.txt" | ForEach-Object {
+    if ($_ -match "^\s*(\S+)\s*=\s*(\S+@\S+)\s*$") {
+        $emailMap[$matches[1]] = $matches[2]
+    }
+}
+
+foreach ($account in $unauthorizedWorldAccounts) {
+    try {
+        $qualifiedAccount = "WinNT://$account"
+        $adminGroup.Remove($qualifiedAccount)
+    } catch {
+        Write-Warning "Failed to remove $account from Administrators group: $_"
+    }
+
+    # Lookup email address
+    if ($emailMap.ContainsKey($account)) {
+        $emailAddress = $emailMap[$account]
+    } else {
+        Write-Warning "No email found for account: $account. Skipping email notification."
+        continue
+    }
+ 
+        $subject = "eleveted account request"
+        $body = @"
+Hello $account,
+
+Your account '$account' has been found in the local Administrators group on server '$env:COMPUTERNAME'.
+
+we send you a link pls make the request in that.
+
+ https://xylem1.service-now.com/smartsupport?id=sc_cat_item&sys_id=2bde152bdba8485044f12a9b8a96198d&sysparm_category=9a54bd804fb94a40acbe01b28110c769
+
+
+This is an automated message.
+
+Regards,
+Operator.
+"@
+
+        # Send the email
+        Send-MailMessage -To $emailAddress `
+                         -From "Prasanna.kharche@xylem.com" `
+                         -Subject $subject `
+                         -Body $body `
+                         <#nslookup -type=mx Xylem.com#>
+                         -SmtpServer "smtp.xylem.com"
+    }
+} else {
+    Write-Host "No WORLD accounts found."
+}
+
+
+
+########### file6
+
+<#maitaenace mode path#>
+$exePath = "\\orion1.xylem.com\Maintenance\Maint mode.exe"
+$process = Start-Process -FilePath $exePath -PassThru
+<#wait#>
+Start-Sleep -Milliseconds 100
+
+<#for sending keys#>
+Add-Type -AssemblyName System.Windows.Forms
+
+# Send the keystrokes
+[System.Windows.Forms.SendKeys]::SendWait("{Enter}")
+Start-Sleep -Milliseconds 200
+[System.Windows.Forms.SendKeys]::SendWait("{TAB}")
+Start-Sleep -Milliseconds 200
+[System.Windows.Forms.SendKeys]::SendWait("{TAB}")
+Start-Sleep -Milliseconds 200
+[System.Windows.Forms.SendKeys]::SendWait("120")
+Start-Sleep -Milliseconds 200
+
+}
+
+###### file7
+
+New-Snapshot -VM $vm -Name "Pre-OS2019 Upgrade" -Description "before upgrading to OS2019 on $(Get-Date -Format 'yyyy-MM-dd')" -Quiesce:$false -Memory:$false
+
+##### file8
+
+Invoke-Command -ComputerName $RemoteServerName -Credential $cred -ScriptBlock {
+powershell.exe -ExecutionPolicy Bypass -command \\world.fluidtechnology.net\software\IT-Resources\Microsoft\In-Place_Upgrades\2019\Install\Scripts\Get3rdPartyServicesRunning_WithPorts.ps1
+
+
+####### file9
+
+<# mention the output file result#>
+$outputFile = ".\thirdPartyPorts.txt"
+
+# Common standard/system ports to exclude
+$excludedPorts = @(21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 3389, 5985, 5986)
+
+Invoke-Command -ComputerName $RemoteServerName -ScriptBlock {
+    param($excludedPorts, $outputFile)
+
+    # Collect netstat output and filter listening ports
+    $netstat = netstat -ano | Where-Object { $_ -match 'LISTENING' }
+
+    $portPidMap = @()
+    foreach ($line in $netstat) {
+        $parts = $line -split '\s+'
+        if ($parts.Count -ge 5 -and $parts[1] -match ':(\d+)$') {
+            $port = [int]$matches[1]
+            $pid = $parts[-1]
+            if ($excludedPorts -notcontains $port) {
+                $portPidMap += [PSCustomObject]@{
+                    Port = $port
+                    PID  = $pid
+                }
+            }
+        }
+    }
+
+    $portPidMap = $portPidMap | Sort-Object Port -Unique
+
+    $results = @()
+    foreach ($entry in $portPidMap) {
+        $pid = $entry.PID
+        $port = $entry.Port
+
+        # Attempt to get the service name using WMI
+        $service = Get-WmiObject -Class Win32_Service | Where-Object { $_.ProcessId -eq $pid }
+        $serviceName = if ($service) { $service.Name } else { Write-output "Unknown / Not a Windows Service" }
+
+        # Try stopping the service (if applicable)
+        if ($service) {
+            try {
+                Stop-Service -Name $service.Name -Force -ErrorAction Stop
+                $status = "Service stopped"
+            } catch {
+                $status = "Failed to stop: $_"
+            }
+        } else {
+            $status = "Not a service or access denied"
+        }
+
+        $results += [PSCustomObject]@{
+           $port
+            <#Port        = $port
+            PID         = $pid
+            ServiceName = $serviceName
+            Status      = $status
+            #>
+        }
+    }
+
+    # Export results to text file
+    $results | Format-Table -AutoSize | Out-File -FilePath $outputFile
+    return $results
+
+} -ArgumentList $excludedPorts, $outputFile
+
+
+}
