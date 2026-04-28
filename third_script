@@ -1,0 +1,11 @@
+#Import the Module
+Import-Module ".\MyModule.psm1"
+# Get the CD/DVD drive
+$cdDrive = Get-CDDrive -VM $vm
+
+<#iso file path #>
+$isoPath = "[datastore1] path/your.iso"   # example: "[datastore1] ISOs/windows2019.iso"
+
+# Mount the ISO and connect the drive
+Set-CDDrive -CD $cdDrive -IsoPath $isoPath -Connected $true -StartConnected $true -Confirm:$false
+
