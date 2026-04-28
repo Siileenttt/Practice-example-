@@ -1,0 +1,62 @@
+upgrade from 2012 to 2019
+
+1. get remote access to the server
+2.check c:\ has free disk of 40GB
+3. check $psversiontable is 5.1 if not upgrade to 5.1
+4.check there is no WORLD\ account in administartor group except(world\administartor...,world\server...)on that server
+	if there, send "https://xylem1.service-now.com/smartsupport?id=sc_cat_item&sys_id=2bde152bdba8485044f12a9b8a96198d&sysparm_category=9a54bd804fb94a40acbe01b28110c769"
+	this link to via email to them for "elevated account request"
+5.run this path in Run " \\orion1.xylem.com\Maintenance\Maint mode.exe" and set minutes for maintanence 120
+6.login to vsphere
+7.search the server add snapshot and discription "Before upgrading to 2019/pkharche"
+8.open powershell in privelage mode and check any third party service in server
+	you can use "powershell.exe -ExecutionPolicy Bypass -command \\world.fluidtechnology.net\software\IT-Resources\Microsoft\In-Place_Upgrades\2019\Install\Scripts\Get3rdPartyServicesRunning_WithPorts.ps1
+"
+9.copy ports
+10.if you not find any third party services in the server then ok if you find then go to services.msc and stop those services.
+11.Create a folder in d:\Install or if that doesn't exist, use e:\
+12.Copy the Windows 2019 folder "\\world.fluidtechnology.net\software\IT-Resources\Microsoft\In-Place_Upgrades\2019\2019OS\" to d:\install\.
+13.after that click on setup.exe and run as administrator.
+14.process start
+15.use window key "N69G4-B89J2-4G8F4-WWYCC-J464C"
+16.select image windows server 2019 standard(desktop experience)
+17.now accept all and proceed
+
+
+
+18.open up the console in vsphere.
+19.Ones the machine has booted to server 2019, get remote access to machine
+20.run this script in privalage mode in server "PowerShell -ExecutionPolicy Bypass -command \\world.fluidtechnology.net\software\IT-Resources\Microsoft\In-Place_Upgrades\2019\Install\Scripts\Copy_and_run_scripts.ps1
+"
+21.launch web console in vsphere
+22.Move from the VM web console tab back to the vCenter tab
+23.Press Ctrl + Alt + R to restart the OS for the selected VM.Click YES to confirm the restart.
+24.Move from the vCenter tab back to the VM web console tab.
+25.Login to the Windows server from the VMware Web Console or Remote Console (not RDP!).
+26.Open an Administrative Command Prompt.
+27.Run the following command:"shutdown /r /o"
+27.a. open the vmware web console
+28.The shutdown message appears, just click Close.
+29.press 4 time tab and 4 time enter
+30.mount vm tool iso file.
+31.in web console in admin cmd "drvload "D:\Program Files\VMware\VMware Tools\Drivers\pvscsi\Win8\amd64\pvscsi.inf"
+"
+32.poweroff the servere
+
+
+33.in vsphere unmount the iso
+34.in vsphere compatibility-> vm compatibility->yes->ESXI 7.0->ok
+35.vpshere-> action ->edit setting->vm option-> general os version ->windows 2019->boot option->EFI-> Enable->ok
+36.poweron the server
+37.now open the firewall port that we find above steps are rdp->run->wf.msc->inbound rule->new rule->ports->next->tcp->specified local port->paste all ports->next-> allow the connection->next->domain,private public->next->BO ports open->finish
+38.powershell admin
+39.$List = Get-Content "c:\windows\system32\logfiles\Firewall\pfirewall.log"
+$List = $List -Split "`n" | Select-Object -Skip 5 | Where-Object { $_ -ne '' }
+$Headers =@('Date', 'Time', 'Action', 'Protocol', 'Src-IP', 'Dst-IP', 'Src-Port', 'Dst-Port', 'Size', 'TCP-Flags', 'TCP-SYN', 'TCP-ACK', 'TCP-Win', 'ICMP-Type', 'ICMP-Code', 'Info', 'Path')
+$Objects = $List | ConvertFrom-Csv -Delimiter ' ' -Header $Headers
+$Objects | Select-Object -Last 10 | Format-Table
+ 
+36.
+
+
+
